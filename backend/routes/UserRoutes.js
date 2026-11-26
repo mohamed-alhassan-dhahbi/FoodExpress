@@ -1,14 +1,14 @@
 const express = require("express");
-const {
-  validateProfileUpdate,
-  validatePasswordChange
-} = require("../middleware/ValidationMiddleware");
 const router = express.Router();
 
 const userController = require("../controllers/UserController");
 
 const authenticate = require("../middleware/AuthMiddleware");
 const authorizeRoles = require("../middleware/RoleMiddleware");
+const {
+  validateProfileUpdate,
+  validatePasswordChange
+} = require("../middleware/ValidationMiddleware");
 
 // ---------- Own profile (any logged-in user) ----------
 // Keep these BEFORE "/:id", otherwise "me" is read as an id.
