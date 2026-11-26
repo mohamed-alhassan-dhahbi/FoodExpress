@@ -1,4 +1,3 @@
-
 const express = require("express");
 const router = express.Router();
 
@@ -7,7 +6,12 @@ const userController = require("../controllers/UserController");
 const authenticate = require("../middleware/AuthMiddleware");
 const authorizeRoles = require("../middleware/RoleMiddleware");
 
-// All users: ADMIN only
+// ---------- Own profile (any logged-in user) ----------
+// Keep these BEFORE "/:id", otherwise "me" is read as an id.
+router.put("/me", authenticate, userController.updateMe);
+router.put("/me/password", authenticate, userController.changePassword);
+
+// ---------- Admin only ----------
 router.get(
   "/",
   authenticate,
@@ -15,7 +19,6 @@ router.get(
   userController.getAllUsers
 );
 
-// Get user by ID: ADMIN only
 router.get(
   "/:id",
   authenticate,
@@ -23,7 +26,6 @@ router.get(
   userController.getUserById
 );
 
-// Update user: ADMIN only
 router.put(
   "/:id",
   authenticate,
@@ -31,7 +33,6 @@ router.put(
   userController.updateUser
 );
 
-// Activate / Deactivate user: ADMIN only
 router.patch(
   "/:id/status",
   authenticate,
@@ -39,7 +40,6 @@ router.patch(
   userController.updateUserStatus
 );
 
-// Delete user: ADMIN only
 router.delete(
   "/:id",
   authenticate,

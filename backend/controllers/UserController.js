@@ -1,5 +1,164 @@
-
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+
+// Shared error handler: invalid ids give 400, duplicate emails 409
+const handleError = (error, res, fallbackMessage) => {
+  if (error.name === "CastError") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid user ID"
+    });
+  }
+
+  if (error.code === 11000) {
+    return res.status(409).json({
+      success: false,
+      message: "Email already registered"
+    });
+  }
+
+  if (error.name === "ValidationError") {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+
+  console.error(fallbackMessage, error);
+
+  return res.status(500).json({
+    success: false,
+    message: fallbackMessage
+  });
+};
+
+// ===================== OWN PROFILE =====================
+
+// Update own profile (firstName, lastName, phone)
+const updateMe = async (req, res) => {
+  try {
+    const { firstName, lastName, phone } = req.body;
+    const updates = {};
+
+    if (firstName !== undefined) {
+      if (typeof firstName !== "string" || !firstName.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "First name cannot be empty"
+        });
+      }
+      updates.firstName = firstName.trim();
+    }
+
+    if (lastName !== undefined) {
+      if (typeof lastName !== "string" || !lastName.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Last name cannot be empty"
+        });
+      }
+      updates.lastName = lastName.trim();
+    }
+
+    if (phone !== undefined) {
+      if (typeof phone !== "string" || !phone.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number cannot be empty"
+        });
+      }
+      updates.phone = phone.trim();
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid fields provided for update"
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, updates, {
+      new: true,
+      runValidators: true
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user
+    });
+  } catch (error) {
+    return handleError(error, res, "Server error while updating profile");
+  }
+};
+
+// Change own password
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required"
+      });
+    }
+
+    if (typeof newPassword !== "string" || newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must contain at least 8 characters"
+      });
+    }
+
+    // The password field is hidden by default in the model
+    const user = await User.findById(req.user.id).select("+password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect"
+      });
+    }
+
+    const isSame = await bcrypt.compare(newPassword, user.password);
+
+    if (isSame) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from the current one"
+      });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully"
+    });
+  } catch (error) {
+    return handleError(error, res, "Server error while changing password");
+  }
+};
+
+// ===================== ADMIN =====================
 
 // Get all users
 const getAllUsers = async (req, res) => {
@@ -11,14 +170,8 @@ const getAllUsers = async (req, res) => {
       count: users.length,
       users
     });
-
   } catch (error) {
-    console.error("Get users error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Server error while retrieving users"
-    });
+    return handleError(error, res, "Server error while retrieving users");
   }
 };
 
@@ -38,19 +191,8 @@ const getUserById = async (req, res) => {
       success: true,
       user
     });
-
   } catch (error) {
-    if (error.name === "CastError") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID"
-      });
-    }
-
-    return res.status(500).json({
-      success: false,
-      message: "Server error"
-    });
+    return handleError(error, res, "Server error");
   }
 };
 
@@ -95,26 +237,8 @@ const updateUser = async (req, res) => {
       message: "User updated successfully",
       user
     });
-
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already registered"
-      });
-    }
-
-    if (error.name === "CastError") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID"
-      });
-    }
-
-    return res.status(500).json({
-      success: false,
-      message: "Server error while updating user"
-    });
+    return handleError(error, res, "Server error while updating user");
   }
 };
 
@@ -127,6 +251,14 @@ const updateUserStatus = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "isActive must be a boolean"
+      });
+    }
+
+    // An admin cannot deactivate their own account
+    if (req.params.id === req.user.id && isActive === false) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot deactivate your own account"
       });
     }
 
@@ -148,18 +280,22 @@ const updateUserStatus = async (req, res) => {
       message: `User ${isActive ? "activated" : "deactivated"} successfully`,
       user
     });
-
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Server error"
-    });
+    return handleError(error, res, "Server error");
   }
 };
 
 // Delete user
 const deleteUser = async (req, res) => {
   try {
+    // An admin cannot delete their own account
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot delete your own account"
+      });
+    }
+
     const user = await User.findByIdAndDelete(req.params.id);
 
     if (!user) {
@@ -173,16 +309,14 @@ const deleteUser = async (req, res) => {
       success: true,
       message: "User deleted successfully"
     });
-
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Server error while deleting user"
-    });
+    return handleError(error, res, "Server error while deleting user");
   }
 };
 
 module.exports = {
+  updateMe,
+  changePassword,
   getAllUsers,
   getUserById,
   updateUser,
