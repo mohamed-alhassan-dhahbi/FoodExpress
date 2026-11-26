@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
 
@@ -13,19 +14,48 @@ const authenticate = (req, res, next) => {
 
         const token = authHeader.split(" ")[1];
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (error) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid or expired token"
+            });
+        }
 
+        // Load the user from the database: the token alone is not enough.
+        // This makes deactivation and role changes effective immediately (rule 10).
+        const user = await User.findById(decoded.id).select("role isActive");
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "User no longer exists"
+            });
+        }
+
+        if (!user.isActive) {
+            return res.status(403).json({
+                success: false,
+                message: "Your account is inactive"
+            });
+        }
+
+        // Role comes from the database, not from the token
         req.user = {
-            id: decoded.id,
-            role: decoded.role
+            id: user._id.toString(),
+            role: user.role
         };
 
         next();
 
     } catch (error) {
-        return res.status(401).json({
+        console.error("Authentication error:", error);
+
+        return res.status(500).json({
             success: false,
-            message: "Invalid or expired token"
+            message: "Server error during authentication"
         });
     }
 };
