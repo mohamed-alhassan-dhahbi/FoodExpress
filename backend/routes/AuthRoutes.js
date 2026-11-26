@@ -8,12 +8,13 @@ const {
 } = require("../controllers/AuthController");
 
 const authenticate = require("../middleware/AuthMiddleware");
+const {
+    validateRegister,
+    validateLogin
+} = require("../middleware/ValidationMiddleware");
 
-router.post("/register", register);
-router.post("/login", login);
+router.post("/register", validateRegister, register);
+router.post("/login", validateLogin, login);
 router.get("/me", authenticate, getMe);
-
-// Example protected route
-// router.get("/me", authenticate, getMe);
 
 module.exports = router;

@@ -1,4 +1,8 @@
 const express = require("express");
+const {
+  validateProfileUpdate,
+  validatePasswordChange
+} = require("../middleware/ValidationMiddleware");
 const router = express.Router();
 
 const userController = require("../controllers/UserController");
@@ -45,6 +49,20 @@ router.delete(
   authenticate,
   authorizeRoles("ADMIN"),
   userController.deleteUser
+);
+
+router.put(
+  "/me", 
+  authenticate, 
+  validateProfileUpdate, 
+  userController.updateMe
+);
+
+router.put(
+  "/me/password",
+  authenticate,
+  validatePasswordChange,
+  userController.changePassword
 );
 
 module.exports = router;
