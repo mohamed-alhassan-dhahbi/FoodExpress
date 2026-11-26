@@ -161,13 +161,67 @@ const changePassword = async (req, res) => {
 // ===================== ADMIN =====================
 
 // Get all users
+// Get all users (search, filters and pagination)
+// Examples: /api/users?search=ali&role=CLIENT&isActive=true&page=2&limit=10
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().sort({ createdAt: -1 });
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
+
+    const { search, role, isActive } = req.query;
+    const filter = {};
+
+    // Search in first name, last name, email and phone
+    if (typeof search === "string" && search.trim()) {
+      // Escape regex characters so the search text is treated as plain text
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(escaped, "i");
+
+      filter.$or = [
+        { firstName: regex },
+        { lastName: regex },
+        { email: regex },
+        { phone: regex }
+      ];
+    }
+
+    // Filter by role
+    if (role !== undefined) {
+      if (!["CLIENT", "RESTAURANT", "ADMIN"].includes(role)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid role filter"
+        });
+      }
+      filter.role = role;
+    }
+
+    // Filter by account status
+    if (isActive !== undefined) {
+      if (isActive !== "true" && isActive !== "false") {
+        return res.status(400).json({
+          success: false,
+          message: "isActive filter must be true or false"
+        });
+      }
+      filter.isActive = isActive === "true";
+    }
+
+    const [users, total] = await Promise.all([
+      User.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      User.countDocuments(filter)
+    ]);
 
     return res.status(200).json({
       success: true,
       count: users.length,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
       users
     });
   } catch (error) {
