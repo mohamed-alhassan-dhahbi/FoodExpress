@@ -368,6 +368,49 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// Change a user's role (admin only)
+const updateUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+
+    if (!["CLIENT", "RESTAURANT", "ADMIN"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Role must be CLIENT, RESTAURANT or ADMIN"
+      });
+    }
+
+    // An admin cannot change their own role (avoids losing the last admin)
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot change your own role"
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `User role changed to ${role}`,
+      user
+    });
+  } catch (error) {
+    return handleError(error, res, "Server error while changing role");
+  }
+};
+
 module.exports = {
   updateMe,
   changePassword,
@@ -375,5 +418,6 @@ module.exports = {
   getUserById,
   updateUser,
   updateUserStatus,
+  updateUserRole,
   deleteUser
 };

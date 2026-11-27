@@ -12,8 +12,13 @@ const {
 
 // ---------- Own profile (any logged-in user) ----------
 // Keep these BEFORE "/:id", otherwise "me" is read as an id.
-router.put("/me", authenticate, userController.updateMe);
-router.put("/me/password", authenticate, userController.changePassword);
+router.put("/me", authenticate, validateProfileUpdate, userController.updateMe);
+router.put(
+  "/me/password",
+  authenticate,
+  validatePasswordChange,
+  userController.changePassword
+);
 
 // ---------- Admin only ----------
 router.get(
@@ -42,6 +47,13 @@ router.patch(
   authenticate,
   authorizeRoles("ADMIN"),
   userController.updateUserStatus
+);
+
+router.patch(
+  "/:id/role",
+  authenticate,
+  authorizeRoles("ADMIN"),
+  userController.updateUserRole
 );
 
 router.delete(
