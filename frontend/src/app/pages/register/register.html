@@ -1,0 +1,81 @@
+<div class="container py-5" style="max-width: 480px">
+  <h1 class="h3 mb-4 text-center">Create an account</h1>
+
+  @if (error()) {
+    <div class="alert alert-danger">{{ error() }}</div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label for="firstName" class="form-label">First name</label>
+        <input id="firstName" class="form-control" formControlName="firstName"
+               (input)="clearServerError('firstName')"
+               [class.is-invalid]="showError('firstName') || serverErrors()['firstName']" />
+        <div class="invalid-feedback">{{ serverErrors()['firstName'] || 'First name is required.' }}</div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <label for="lastName" class="form-label">Last name</label>
+        <input id="lastName" class="form-control" formControlName="lastName"
+               (input)="clearServerError('lastName')"
+               [class.is-invalid]="showError('lastName') || serverErrors()['lastName']" />
+        <div class="invalid-feedback">{{ serverErrors()['lastName'] || 'Last name is required.' }}</div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input id="email" type="email" class="form-control" formControlName="email"
+             (input)="clearServerError('email')"
+             [class.is-invalid]="showError('email') || serverErrors()['email']" />
+      <div class="invalid-feedback">{{ serverErrors()['email'] || 'Enter a valid email.' }}</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="phone" class="form-label">Phone</label>
+      <input id="phone" type="tel" class="form-control" formControlName="phone"
+             (input)="clearServerError('phone')"
+             [class.is-invalid]="showError('phone') || serverErrors()['phone']" />
+      <div class="invalid-feedback">{{ serverErrors()['phone'] || 'Phone must contain 8 to 15 digits.' }}</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="password" class="form-label">Password</label>
+      <input id="password" type="password" class="form-control" formControlName="password"
+             (input)="clearServerError('password')"
+             [class.is-invalid]="showError('password') || serverErrors()['password']" />
+      <div class="invalid-feedback">
+        @if (serverErrors()['password']) {
+          {{ serverErrors()['password'] }}
+        } @else if (showError('password', 'required')) {
+          Password is required.
+        } @else if (showError('password', 'minlength')) {
+          At least 8 characters.
+        } @else if (showError('password', 'lower')) {
+          Add a lowercase letter.
+        } @else if (showError('password', 'upper')) {
+          Add an uppercase letter.
+        } @else if (showError('password', 'digit')) {
+          Add a digit.
+        }
+      </div>
+      <div class="form-text">8+ characters with an uppercase letter, a lowercase letter and a digit.</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="confirmPassword" class="form-label">Confirm password</label>
+      <input id="confirmPassword" type="password" class="form-control" formControlName="confirmPassword"
+             (input)="clearServerError('confirmPassword')"
+             [class.is-invalid]="(form.controls.confirmPassword.touched && form.hasError('mismatch')) || serverErrors()['confirmPassword']" />
+      <div class="invalid-feedback">{{ serverErrors()['confirmPassword'] || 'Passwords do not match.' }}</div>
+    </div>
+
+    <button class="btn btn-primary w-100" type="submit" [disabled]="loading()">
+      {{ loading() ? 'Creating account...' : 'Register' }}
+    </button>
+  </form>
+
+  <p class="text-center mt-3">
+    Already have an account? <a routerLink="/login">Log in</a>
+  </p>
+</div>
