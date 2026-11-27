@@ -12,7 +12,13 @@ const {
 
 // ---------- Own profile (any logged-in user) ----------
 // Keep these BEFORE "/:id", otherwise "me" is read as an id.
-router.put("/me", authenticate, validateProfileUpdate, userController.updateMe);
+router.put(
+  "/me", 
+  authenticate, 
+  validateProfileUpdate, 
+  userController.updateMe
+);
+
 router.put(
   "/me/password",
   authenticate,
@@ -61,20 +67,6 @@ router.delete(
   authenticate,
   authorizeRoles("ADMIN"),
   userController.deleteUser
-);
-
-router.put(
-  "/me", 
-  authenticate, 
-  validateProfileUpdate, 
-  userController.updateMe
-);
-
-router.put(
-  "/me/password",
-  authenticate,
-  validatePasswordChange,
-  userController.changePassword
 );
 
 module.exports = router;

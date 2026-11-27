@@ -1,5 +1,11 @@
-
 require("dotenv").config();
+
+["JWT_SECRET", "MONGO_URI"].forEach((name) => {
+  if (!process.env[name]) {
+    console.error(`Missing environment variable: ${name}. Check your .env file.`);
+    process.exit(1);
+  }
+});
 
 const express = require("express");
 const cors = require("cors");
